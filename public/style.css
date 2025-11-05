@@ -1,0 +1,88 @@
+/* ----- СТИЛІ ДЛЯ TOGGLE SWITCH ----- */
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    /* Ширина перемикача */
+    height: 34px;
+    /* Висота перемикача */
+}
+
+/* Ховаємо стандартний чекбокс */
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Слайдер (основна доріжка) */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    /* Колір вимкненого стану */
+    transition: 0.4s;
+}
+
+/* Ручка/повзунок слайдера */
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    /* Колір ручки */
+    transition: 0.4s;
+}
+
+/* Колір слайдера, коли він УВІМКНЕНИЙ (dark mode) */
+input:checked+.slider {
+    background-color: #2196F3;
+    /* Синій колір для нічного режиму */
+}
+
+/* Переміщення ручки вправо, коли УВІМКНЕНО */
+input:checked+.slider:before {
+    transform: translateX(26px);
+}
+
+/* Закруглення (робимо перемикач овальним) */
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+
+/* 🌞 Стилі для "ДЕННОГО" режиму (light-mode) */
+/* ==================================== */
+.light-mode {
+    /* ❗ Фонові зображення */
+    background: url('./img/v882batch2-kul-12.jpg') no-repeat center center fixed;
+    background-size: cover;
+    /* Важливо: гарантує покриття всього body */
+
+    /* Колір тексту для світлого фону */
+    color: #333;
+}
+
+/* ==================================== */
+/* 🌌 Стилі для "НІЧНОГО" режиму (dark-mode) */
+/* ==================================== */
+.dark-mode {
+    /* ❗ Фонові зображення */
+    background: url('./img/5399714.jpg') no-repeat center center fixed;
+    background-size: cover;
+
+    /* Колір тексту для темного фону */
+    color: #f4f4f4;
+}

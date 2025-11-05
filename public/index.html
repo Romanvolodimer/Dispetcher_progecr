@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Моніторинг показника</title>
+    <link rel="stylesheet" href="./style.css">
     <style>
         body {
             font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
@@ -12,10 +13,12 @@
         }
 
         .card {
+            background-color: #cecdce;
             border: 1px solid #ddd;
             border-radius: 12px;
             padding: 1rem 1.25rem;
             max-width: 360px;
+            color: #000;
         }
 
         .card.alert {
@@ -75,11 +78,15 @@
         }
 
         .controls label {
+            display: flex;
+            justify-content: space-around;
             font-size: .9rem;
             color: #333;
+            align-items: center;
         }
 
         .controls input {
+            margin-left: 5px;
             padding: .45rem .6rem;
             border: 1px solid #ccc;
             border-radius: 8px;
@@ -101,14 +108,19 @@
     </style>
 </head>
 
-<body>
+<body class="light-mode">
+    <label class="toggle-switch">
+        <input type="checkbox" id="theme-checkbox">
+        <span class="slider round"></span>
+    </label>
+    <span id="toggle-label" style="margin-left: 10px;">Нічний режим 🌙</span>
     <div class="carts">
         <!-- КАРТКА 1 -->
         <div class="card" id="card1">
             <h1>Моніторинг Еней</h1>
 
             <div class="row">
-                <div>Поточне значення: <span id="val1" class="value">—</span></div>
+                <div>Поточна потужність: <span id="val1" class="value">—</span></div>
                 <div class="chip">Поріг: <span id="thr1">—</span></div>
             </div>
 
@@ -122,7 +134,7 @@
             </div>
 
             <div class="controls">
-                <label>Новий поріг (THRESHOLD):
+                <label>Цільова потужність:
                     <input type="number" step="any" id="thresholdInput1" placeholder="наприклад, 42.5" />
                 </label>
 
@@ -139,7 +151,7 @@
             <h1>Моніторинг УНІПЛИТ</h1>
 
             <div class="row">
-                <div>Поточне значення: <span id="val2" class="value">—</span></div>
+                <div>Поточна потужність: <span id="val2" class="value">—</span></div>
                 <div class="chip">Поріг: <span id="thr2">—</span></div>
             </div>
 
@@ -153,7 +165,7 @@
             </div>
 
             <div class="controls">
-                <label>Новий поріг (THRESHOLD):
+                <label>Цільова потужність:
                     <input type="number" step="any" id="thresholdInput2" placeholder="наприклад, 42.5" />
                 </label>
 
@@ -170,7 +182,7 @@
             <h1>Моніторинг КАШТАН</h1>
 
             <div class="row">
-                <div>Поточне значення: <span id="val3" class="value">—</span></div>
+                <div>Поточна потужність: <span id="val3" class="value">—</span></div>
                 <div class="chip">Поріг: <span id="thr3">—</span></div>
             </div>
 
@@ -184,7 +196,7 @@
             </div>
 
             <div class="controls">
-                <label>Новий поріг (THRESHOLD):
+                <label>Цільова потужність:
                     <input type="number" step="any" id="thresholdInput3" placeholder="наприклад, 42.5" />
                 </label>
 
@@ -200,7 +212,7 @@
 
     <script src="server-listener.js"></script>
     <script src="frontend-logic.js"></script>
-
+    <script src="./img/darks.js"></script>
 
 
 
