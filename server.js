@@ -154,7 +154,7 @@ function sendConfigAll(ws) {
         ts,
       });
 
-      console.log(`📊 metric${id}: ${num}`);
+      // console.log(`📊 metric${id}: ${num}`);
 
       if (!Number.isNaN(num) && num < threshold) {
         broadcast({
@@ -164,7 +164,7 @@ function sendConfigAll(ws) {
           threshold,
           ts,
         });
-        console.log(`⚠️ ALERT metric${id}: ${num} < ${threshold}`);
+        // console.log(`⚠️ ALERT metric${id}: ${num} < ${threshold}`);
       }
     } catch (err) {
       broadcast({
@@ -173,7 +173,7 @@ function sendConfigAll(ws) {
         message: err.message,
         ts: new Date().toISOString(),
       });
-      console.error(`❌ metric${id} error:`, err.message);
+      // console.error(`❌ metric${id} error:`, err.message);
     }
   }
 
