@@ -396,7 +396,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // --- ЛОГІКА АВТОМАТИЧНОГО ПЕРЕЗАВАНТАЖЕННЯ ТА ПІДТВЕРДЖЕННЯ АКТИВНОСТІ ---
 
 // Інтервал, через який з'явиться модальне вікно (60 хвилин)
-const MODAL_INTERVAL_MS = 60 * 1000;
+const MODAL_INTERVAL_MS = 60 * 60 * 1000;
 
 // Елементи модального вікна та аудіо
 const modal = document.getElementById("activityModal");
