@@ -55,7 +55,10 @@ const {
   METRIC_SELECTOR_2B,
 } = process.env;
 
-let TH = Number(process.env.THRESHOLD || "0");
+let TH1 = Number(process.env.THRESHOLD_1 || "0");
+let TH2 = Number(process.env.THRESHOLD_2 || "0");
+let TH3 = Number(process.env.THRESHOLD_3 || "0");
+
 let INTERVAL_MS = Number(process.env.POLL_INTERVAL || "15") * 1000;
 const PORT = Number(process.env.PORT || 3000);
 
@@ -69,6 +72,12 @@ const server = app.listen(PORT, () => {
 
 const wss = new WebSocketServer({ server });
 
+let browser; // Оголошуємо тут
+let page1;
+let pageLogin2; // Ця сторінка використовується для логіну System 2 та метрики 2
+let page3;
+
+// --- надсилання WS-повідомлення всім клієнтам
 function broadcast(obj) {
   const data = JSON.stringify(obj);
   wss.clients.forEach((c) => {
@@ -78,57 +87,82 @@ function broadcast(obj) {
   });
 }
 
-function sendConfig(ws) {
-  ws?.send(
-    JSON.stringify({
-      type: "config",
-      threshold: TH,
-      pollIntervalMs: INTERVAL_MS,
-    })
-  );
+// --- надсилаємо конфіг усім клієнтам
+function sendConfigAll(ws) {
+  const cards = [
+    { id: 1, threshold: TH1, pollIntervalMs: INTERVAL_MS },
+    { id: 2, threshold: TH2, pollIntervalMs: INTERVAL_MS },
+    { id: 3, threshold: TH3, pollIntervalMs: INTERVAL_MS },
+  ];
+  ws?.send(JSON.stringify({ type: "configAll", cards }));
 }
 
+// === Основна логіка Puppeteer ===
 (async () => {
   const browser = await puppeteer.launch({
     headless: "new",
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
+  async function loginSystem1(page) {
+    console.log("🔐 Логін у систему 1...");
+    // Навігація на сторінку логіну для очищення потенційної сесії
+    await page.goto(LOGIN_URL_1, { waitUntil: "networkidle2" });
+    await page.type(USERNAME_SELECTOR_1, USERNAME_1);
+    await page.type(PASSWORD_SELECTOR_1, PASSWORD_1);
+    await Promise.all([
+      page.click(SUBMIT_SELECTOR_1),
+      page.waitForNavigation({ waitUntil: "networkidle2" }),
+    ]);
+    console.log("✅ Авторизація 1 успішна");
+  }
 
-  // === 1. Перша система ===
-  const page1 = await browser.newPage();
-  await page1.goto(LOGIN_URL_1, { waitUntil: "networkidle2" });
-  console.log("🔐 Логін у систему 1...");
-  await page1.type(USERNAME_SELECTOR_1, USERNAME_1);
-  await page1.type(PASSWORD_SELECTOR_1, PASSWORD_1);
-  await Promise.all([
-    page1.click(SUBMIT_SELECTOR_1),
-    page1.waitForNavigation({ waitUntil: "networkidle2" }),
-  ]);
-  console.log("✅ Авторизація 1 успішна");
+  async function loginSystem2(page) {
+    console.log("🔐 Логін у систему 2...");
+    // Навігація на сторінку логіну для очищення потенційної сесії
+    await page.goto(LOGIN_URL_2, { waitUntil: "networkidle2" });
+    await page.type(USERNAME_SELECTOR_2, USERNAME_2);
+    await page.type(PASSWORD_SELECTOR_2, PASSWORD_PASSWORD_2);
+    await Promise.all([
+      page.click(SUBMIT_SELECTOR_2),
+      page.waitForNavigation({ waitUntil: "networkidle2" }),
+    ]);
+    console.log("✅ Авторизація 2 успішна");
+  }
+  // // --- 1. Перша система ---
+  // const page1 = await browser.newPage();
+  // await page1.goto(LOGIN_URL_1, { waitUntil: "networkidle2" });
+  // console.log("🔐 Логін у систему 1...");
+  // await page1.type(USERNAME_SELECTOR_1, USERNAME_1);
+  // await page1.type(PASSWORD_SELECTOR_1, PASSWORD_1);
+  // await Promise.all([
+  //   page1.click(SUBMIT_SELECTOR_1),
+  //   page1.waitForNavigation({ waitUntil: "networkidle2" }),
+  // ]);
+  // console.log("✅ Авторизація 1 успішна");
 
-  // === 2. Друга система ===
-  const login2 = LOGIN_URL_2;
-  const base2 = login2.replace("/login.php", "");
-  const pageLogin2 = await browser.newPage();
-  console.log("🔐 Логін у систему 2...");
-  await pageLogin2.goto(login2, { waitUntil: "networkidle2" });
-  await pageLogin2.type(USERNAME_SELECTOR_2, USERNAME_2);
-  await pageLogin2.type(PASSWORD_SELECTOR_2, PASSWORD_2);
-  await Promise.all([
-    pageLogin2.click(SUBMIT_SELECTOR_2),
-    pageLogin2.waitForNavigation({ waitUntil: "networkidle2" }),
-  ]);
-  console.log("✅ Авторизація 2 успішна");
+  // // --- 2. Друга система ---
+  // const base2 = LOGIN_URL_2.replace("/login.php", "");
+  // const pageLogin2 = await browser.newPage();
+  // console.log("🔐 Логін у систему 2...");
+  // await pageLogin2.goto(LOGIN_URL_2, { waitUntil: "networkidle2" });
+  // await pageLogin2.type(USERNAME_SELECTOR_2, USERNAME_2);
+  // await pageLogin2.type(PASSWORD_SELECTOR_2, PASSWORD_2);
+  // await Promise.all([
+  //   pageLogin2.click(SUBMIT_SELECTOR_2),
+  //   pageLogin2.waitForNavigation({ waitUntil: "networkidle2" }),
+  // ]);
+  // console.log("✅ Авторизація 2 успішна");
 
-  // сторінки з метриками
+  // --- Сторінки з метриками ---
   const page2 = await browser.newPage();
   const page3 = await browser.newPage();
   await page2.goto(`${base2}/screen.php?id=1`, { waitUntil: "networkidle2" });
   await page3.goto(`${base2}/screen.php?id=2`, { waitUntil: "networkidle2" });
 
-  console.log("✅ Всі сторінки відкрито. Починаємо моніторинг...");
+  console.log("📊 Всі сторінки відкрито. Починаємо моніторинг...");
 
-  async function checkMetric(page, selector, label) {
+  // --- Отримання метрик ---
+  async function checkMetric(page, selector, id, threshold) {
     try {
       await page.waitForSelector(selector, { timeout: 15000 });
       const raw = await page.$eval(selector, (el) =>
@@ -140,81 +174,116 @@ function sendConfig(ws) {
           .replace(",", ".")
       );
       const ts = new Date().toISOString();
-      broadcast({ type: label, value: num, raw, threshold: TH, ts });
-      console.log(`${label}: ${num}`);
-      if (!Number.isNaN(num) && num < TH) {
+
+      broadcast({
+        type: "metric",
+        id,
+        value: num,
+        threshold,
+        ts,
+      });
+
+      console.log(`📊 metric${id}: ${num}`);
+
+      if (!Number.isNaN(num) && num < threshold) {
         broadcast({
           type: "alert",
-          source: label,
+          id,
           value: num,
-          threshold: TH,
+          threshold,
           ts,
         });
+        console.log(`⚠️ ALERT metric${id}: ${num} < ${threshold}`);
       }
     } catch (err) {
       broadcast({
         type: "error",
-        source: label,
+        id,
         message: err.message,
         ts: new Date().toISOString(),
       });
+      console.error(`❌ metric${id} error:`, err.message);
     }
   }
 
+  // --- Опитування всіх метрик ---
   async function checkAll() {
-    await checkMetric(page1, METRIC_SELECTOR_1, "metric1");
-    await checkMetric(page2, METRIC_SELECTOR_2A, "metric2");
-    await checkMetric(page3, METRIC_SELECTOR_2B, "metric3");
+    await checkMetric(page1, METRIC_SELECTOR_1, 1, TH1);
+    await checkMetric(page2, METRIC_SELECTOR_2A, 2, TH2);
+    await checkMetric(page3, METRIC_SELECTOR_2B, 3, TH3);
   }
 
   await checkAll();
   let intervalHandle = setInterval(checkAll, INTERVAL_MS);
 
+  // --- Перезапуск інтервалу ---
   function resetInterval(newMs) {
     if (intervalHandle) clearInterval(intervalHandle);
     intervalHandle = setInterval(checkAll, newMs);
   }
 
+  // --- WebSocket логіка ---
   wss.on("connection", (ws) => {
-    sendConfig(ws);
+    sendConfigAll(ws);
     ws.on("message", (msg) => {
       try {
         const data = JSON.parse(msg.toString());
+
         if (data.type === "setThreshold") {
           const v = Number(data.value);
           if (!Number.isNaN(v)) {
-            TH = v;
+            if (data.id === 1) TH1 = v;
+            if (data.id === 2) TH2 = v;
+            if (data.id === 3) TH3 = v;
+
             broadcast({
-              type: "config",
-              threshold: TH,
-              pollIntervalMs: INTERVAL_MS,
+              type: "configAll",
+              cards: [
+                { id: 1, threshold: TH1, pollIntervalMs: INTERVAL_MS },
+                { id: 2, threshold: TH2, pollIntervalMs: INTERVAL_MS },
+                { id: 3, threshold: TH3, pollIntervalMs: INTERVAL_MS },
+              ],
             });
-            broadcast({ type: "info", message: `Поріг оновлено до ${TH}` });
+            broadcast({
+              type: "info",
+              id: data.id,
+              message: `Поріг оновлено до ${v}`,
+            });
           }
         }
+
         if (data.type === "setPollIntervalMs") {
           const v = Number(data.value);
           if (!Number.isNaN(v) && v >= 1000) {
             INTERVAL_MS = v;
             resetInterval(INTERVAL_MS);
             broadcast({
-              type: "config",
-              threshold: TH,
-              pollIntervalMs: INTERVAL_MS,
+              type: "configAll",
+              cards: [
+                { id: 1, threshold: TH1, pollIntervalMs: INTERVAL_MS },
+                { id: 2, threshold: TH2, pollIntervalMs: INTERVAL_MS },
+                { id: 3, threshold: TH3, pollIntervalMs: INTERVAL_MS },
+              ],
             });
             broadcast({
               type: "info",
-              message: `Інтервал опитування ${Math.round(
+              id: data.id,
+              message: `Інтервал опитування оновлено до ${Math.round(
                 INTERVAL_MS / 1000
               )} с`,
             });
           }
         }
+
         if (data.type === "checkNow") checkAll();
-      } catch {}
+        if (data.type === "getConfigAll") sendConfigAll(ws);
+      } catch (err) {
+        console.warn("WS parse error:", err);
+      }
     });
   });
 
+  // --- Завершення ---
   process.on("SIGINT", async () => {
     console.log("\n🛑 Зупинка…");
     try {

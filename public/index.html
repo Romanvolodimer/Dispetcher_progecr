@@ -109,12 +109,14 @@
 </head>
 
 <body class="light-mode">
+    <button id="settingsButton"> <a href="settings.html">Налаштування</a> </button>
+
     <label class="theme-switch">
         <input type="checkbox" id="theme-checkbox">
         <span class="slider round"></span>
     </label>
+
     <div class="carts">
-        <!-- КАРТКА 1 -->
         <div class="card" id="card1">
             <h1>Моніторинг Еней</h1>
 
@@ -129,23 +131,19 @@
                 <button id="test1">Перевірити звук</button>
                 <button id="mute1">🔇 Вимкнути звук</button>
                 <button id="unmute1">🔊 Увімкнути звук</button>
-                <button id="checkNow1">🔄 Опитати зараз</button>
             </div>
 
             <div class="controls">
-                <label>Цільова потужність:
-                    <input type="number" step="any" id="thresholdInput1" placeholder="наприклад, 42.5" />
-                </label>
-
+                <label>Коригування порогу (крок x1000):</label>
                 <div style="display:flex; gap:.5rem;">
-                    <button id="saveThreshold1">Зберегти поріг</button>
+                    <button id="setPositiveThreshold1" class="btn-adjust-threshold">+</button>
+                    <button id="setNegativeThreshold1" class="btn-adjust-threshold">-</button>
                 </div>
             </div>
 
             <div id="log1" class="log"></div>
         </div>
 
-        <!-- КАРТКА 2 -->
         <div class="card" id="card2">
             <h1>Моніторинг УНІПЛИТ</h1>
 
@@ -160,23 +158,19 @@
                 <button id="test2">Перевірити звук</button>
                 <button id="mute2">🔇 Вимкнути звук</button>
                 <button id="unmute2">🔊 Увімкнути звук</button>
-                <button id="checkNow2">🔄 Опитати зараз</button>
             </div>
 
             <div class="controls">
-                <label>Цільова потужність:
-                    <input type="number" step="any" id="thresholdInput2" placeholder="наприклад, 42.5" />
-                </label>
-
+                <label>Коригування порогу (крок x1000):</label>
                 <div style="display:flex; gap:.5rem;">
-                    <button id="saveThreshold2">Зберегти поріг</button>
+                    <button id="setPositiveThreshold2" class="btn-adjust-threshold">+</button>
+                    <button id="setNegativeThreshold2" class="btn-adjust-threshold">-</button>
                 </div>
             </div>
 
             <div id="log2" class="log"></div>
         </div>
 
-        <!-- КАРТКА 3 -->
         <div class="card" id="card3">
             <h1>Моніторинг КАШТАН</h1>
 
@@ -191,16 +185,13 @@
                 <button id="test3">Перевірити звук</button>
                 <button id="mute3">🔇 Вимкнути звук</button>
                 <button id="unmute3">🔊 Увімкнути звук</button>
-                <button id="checkNow3">🔄 Опитати зараз</button>
             </div>
 
             <div class="controls">
-                <label>Цільова потужність:
-                    <input type="number" step="any" id="thresholdInput3" placeholder="наприклад, 42.5" />
-                </label>
-
+                <label>Коригування порогу (крок x1000):</label>
                 <div style="display:flex; gap:.5rem;">
-                    <button id="saveThreshold3">Зберегти поріг</button>
+                    <button id="setPositiveThreshold3" class="btn-adjust-threshold">+</button>
+                    <button id="setNegativeThreshold3" class="btn-adjust-threshold">-</button>
                 </div>
             </div>
 
@@ -208,9 +199,20 @@
         </div>
     </div>
 
+    <div id="activityModal" class="modal-hidden">
+        <div class="modal-content">
+            <h4>⚠️ Підтвердження Активності</h2>
+                <p>Моніторинг працює довго. Будь ласка, натисніть "Продовжити", щоб оновити сторінку та підтвердити, що
+                    ви
+                    активно стежите за даними.</p>
+                <button id="modalRefreshButton">Продовжити</button>
+        </div>
+    </div>
 
-    <script src="server-listener.js"></script>
-    <script src="frontend-logic.js"></script>
+    <audio id="alertSound" src="./img/sound.mp3" preload="auto"></audio>
+
+    <script src="proba-mail.js"></script>
+
     <script src="./img/darks.js"></script>
 
 
