@@ -46,6 +46,42 @@ async function checkDatabaseTimezone() {
   }
 }
 
+// --- 2.1. 💡 НОВА ФУНКЦІЯ: Отримання поточної дати та години з БД ---
+/**
+ * Отримує поточну дату та годину з бази даних для уникнення проблем з часовими поясами.
+ * @returns {Promise<{date: string, hour: number}>} - Об'єкт з датою (YYYY-MM-DD) та годиною (1-24)
+ */
+export async function getCurrentDateTimeFromDB() {
+  const query = `
+    SELECT 
+      CURRENT_DATE AS db_date,
+      (EXTRACT(HOUR FROM NOW()) + 1)::int AS db_hour_1_24;
+  `;
+
+  try {
+    const result = await pool.query(query);
+    const row = result.rows[0];
+
+    const date = row.db_date.toISOString().split("T")[0]; // YYYY-MM-DD
+    const hour = Math.floor(row.db_hour_1_24); // 1-24
+
+    return { date, hour };
+  } catch (error) {
+    console.error("❌ Помилка під час отримання часу з БД:", error.message);
+    // Fallback до локального часу Node.js у разі помилки
+    const now = new Date();
+    const date = now
+      .toLocaleDateString("en-CA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+      .replace(/\//g, "-");
+    const hour = now.getHours() + 1;
+    return { date, hour };
+  }
+}
+
 // --- 3. 💡 ОНОВЛЕНА ФУНКЦІЯ: Ініціалізація Бази Даних (створення двох таблиць) ---
 async function initializeDatabase() {
   const createInstallationTableQuery = `

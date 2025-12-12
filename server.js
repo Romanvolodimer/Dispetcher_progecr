@@ -12,6 +12,7 @@ import {
   getHourlyThreshold,
   getCapacityValueForHour,
   updateHourlyThreshold, // 💡 КЛЮЧОВА ЗМІНА: Нова функція для збереження порогу в БД
+  getCurrentDateTimeFromDB, // 💡 ВИПРАВЛЕННЯ: Функція для отримання часу з БД
 } from "./dbHandler.js";
 
 dotenv.config();
@@ -188,19 +189,10 @@ function sendConfigAll(ws) {
   // --- Отримання метрик ---
   async function checkMetric(page, selector, id, threshold) {
     const installationName = CARD_TO_INSTALLATION_MAP[id];
-    const now = new Date();
 
-    // 💡 Визначаємо дату у форматі YYYY-MM-DD за локальним часом
-    const currentDateString = now
-      .toLocaleDateString("en-CA", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      })
-      .replace(/\//g, "-");
-
-    // 💡 Година у форматі 1-24: 4:53 (hour 4) -> 5
-    const currentHour = now.getHours() + 1;
+    // 💡 ВИПРАВЛЕНО: Отримуємо дату та годину з БД для уникнення проблем з часовими поясами
+    const { date: currentDateString, hour: currentHour } =
+      await getCurrentDateTimeFromDB();
 
     let thresholdUsed = threshold; // Починаємо із запасного (статичного) порогу
     let capacityValue = 0; // Для LRV (в МВт)
@@ -324,19 +316,9 @@ function sendConfigAll(ws) {
           const installationName = CARD_TO_INSTALLATION_MAP[cardId];
 
           if (cardId >= 1 && cardId <= 3) {
-            const now = new Date();
-
-            // 💡 Отримання дати у форматі YYYY-MM-DD за локальним часом
-            const currentDateString = now
-              .toLocaleDateString("en-CA", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-              })
-              .replace(/\//g, "-");
-
-            // 💡 Година у форматі 1-24
-            const currentHour = now.getHours() + 1;
+            // 💡 ВИПРАВЛЕНО: Отримуємо дату та годину з БД для уникнення проблем з часовими поясами
+            const { date: currentDateString, hour: currentHour } =
+              await getCurrentDateTimeFromDB();
 
             try {
               // 1. Отримуємо базове значення розвантаження з БД (Capacity Value / LRV)
