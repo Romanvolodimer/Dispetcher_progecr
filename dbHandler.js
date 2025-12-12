@@ -46,28 +46,39 @@ async function checkDatabaseTimezone() {
   }
 }
 
-// --- 2.1. 💡 НОВА ФУНКЦІЯ: Отримання поточної дати та години з БД ---
+// --- 2.1. 💡 ОНОВЛЕНА ФУНКЦІЯ: Отримання поточної дати та години в EET ---
 /**
- * Отримує поточну дату та годину з бази даних для уникнення проблем з часовими поясами.
- * @returns {Promise<{date: string, hour: number}>} - Об'єкт з датою (YYYY-MM-DD) та годиною (1-24)
+ * Отримує поточну дату та годину в часовому поясі EET (Europe/Kiev, UTC+2).
+ * Використовує локальний час Node.js, оскільки дані зберігаються з урахуванням EET.
+ * @returns {Promise<{date: string, hour: number}>} - Об'єкт з датою (YYYY-MM-DD) та годиною (1-24) в EET
  */
 export async function getCurrentDateTimeFromDB() {
-  const query = `
-    SELECT 
-      CURRENT_DATE AS db_date,
-      (EXTRACT(HOUR FROM NOW()) + 1)::int AS db_hour_1_24;
-  `;
-
   try {
-    const result = await pool.query(query);
-    const row = result.rows[0];
+    // Використовуємо час Node.js в часовому поясі EET (Europe/Kiev)
+    const now = new Date();
 
-    const date = row.db_date.toISOString().split("T")[0]; // YYYY-MM-DD
-    const hour = Math.floor(row.db_hour_1_24); // 1-24
+    // Отримуємо дату та час в EET
+    const eetDateString = now.toLocaleDateString("en-CA", {
+      timeZone: "Europe/Kiev",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    const eetTimeString = now.toLocaleTimeString("en-US", {
+      timeZone: "Europe/Kiev",
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const date = eetDateString.replace(/\//g, "-"); // YYYY-MM-DD
+    const hourEET = parseInt(eetTimeString.split(":")[0], 10); // 0-23
+    const hour = hourEET + 1; // Конвертуємо до формату 1-24
 
     return { date, hour };
   } catch (error) {
-    console.error("❌ Помилка під час отримання часу з БД:", error.message);
+    console.error("❌ Помилка під час отримання часу EET:", error.message);
     // Fallback до локального часу Node.js у разі помилки
     const now = new Date();
     const date = now
