@@ -4,13 +4,14 @@
 document.addEventListener("DOMContentLoaded", () => {
   // ---- Спільний стан для звуку та керування
   let audioCtx = null;
-  const cards = [1, 2, 3];
+  const cards = [1, 2, 3, 4];
 
   // 💡 КЛЮЧОВА ЗМІНА 1: Стан для керування звуком
   const cardMuteState = {
     1: { muted: false },
     2: { muted: false },
     3: { muted: false },
+    4: { muted: false },
   };
 
   // 💡 КЛЮЧОВА ЗМІНА 2: Стан для порогів, LRV ТА КЕРУВАННЯ КНОПКАМИ
@@ -28,6 +29,12 @@ document.addEventListener("DOMContentLoaded", () => {
       resetHour: new Date().getHours() + 1,
     },
     3: {
+      threshold: 0,
+      lrv: 0,
+      lastAction: null,
+      resetHour: new Date().getHours() + 1,
+    },
+    4: {
       threshold: 0,
       lrv: 0,
       lastAction: null,
@@ -64,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
         g.gain.exponentialRampToValueAtTime(
           0.0001,
-          audioCtx.currentTime + 0.02
+          audioCtx.currentTime + 0.02,
         );
         o.stop(audioCtx.currentTime + 0.05);
       }, durationMs);
@@ -119,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
       state.resetHour = currentHour;
       addLog(
         cardId,
-        `🔄 Скидання стану коригування: нова година (${currentHour}).`
+        `🔄 Скидання стану коригування: нова година (${currentHour}).`,
       );
     }
 
@@ -141,7 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---- робота з усіма картами / WebSocket
   const ws = new WebSocket(
-    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`
+    `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`,
   );
 
   ws.onopen = () => {
@@ -169,9 +176,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // ✅ Оновлення UI
         if (thrEl) thrEl.textContent = cfg.threshold;
-        document.getElementById(
-          `interval${cardId}`
-        ).textContent = `${Math.round(cfg.pollIntervalMs / 1000)} с`;
+        document.getElementById(`interval${cardId}`).textContent =
+          `${Math.round(cfg.pollIntervalMs / 1000)} с`;
 
         // 💡 Оновлюємо стан кнопок після отримання конфігурації (може бути після коригування)
         updateButtonStates(cardId);
@@ -213,15 +219,15 @@ document.addEventListener("DOMContentLoaded", () => {
       if (statusEl) {
         if (!isNaN(v) && v < lowerBound) {
           statusEl.textContent = `🚨 НИЖЧЕ КРИТИЧНОГО ПОРОГУ (${lowerBound} кВт)! Оновлено: ${new Date(
-            data.ts
+            data.ts,
           ).toLocaleString()}`;
         } else if (!isNaN(v) && v > upperBound) {
           statusEl.textContent = `🚨 ВИЩЕ КРИТИЧНОГО ПОРОГУ (${upperBound} кВт)! Оновлено: ${new Date(
-            data.ts
+            data.ts,
           ).toLocaleString()}`;
         } else {
           statusEl.textContent = `✅ ОК. Поріг: ${thresholdKW} кВт (±${tolerance}). Оновлено: ${new Date(
-            data.ts
+            data.ts,
           ).toLocaleString()}`;
         }
       }
@@ -229,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // ✅ Оновлення логу
       addLog(
         id,
-        `Оновлення. Значення: ${v.toFixed(2)} кВт, Поріг: ${thresholdKW} кВт.`
+        `Оновлення. Значення: ${v.toFixed(2)} кВт, Поріг: ${thresholdKW} кВт.`,
       );
 
       // 💡 ВИКЛИК ОНОВЛЕННЯ СТАНУ КНОПОК
@@ -243,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
         id,
         `⚠️ Значення ${data.value.toFixed(2)} кВт вийшло за межі порогу ${
           data.threshold
-        } кВт (±100)`
+        } кВт (±100)`,
       );
       beep(id);
 
@@ -328,7 +334,11 @@ document.addEventListener("DOMContentLoaded", () => {
       plusBtn.onclick = () => {
         // Надсилаємо запит на коригування з позитивним знаком (бекенд знайде LRV)
         ws.send(
-          JSON.stringify({ type: "adjustThreshold", cardId: id, adjustment: 1 })
+          JSON.stringify({
+            type: "adjustThreshold",
+            cardId: id,
+            adjustment: 1,
+          }),
         );
 
         // 2. Оновлюємо внутрішній стан, щоб заблокувати кнопку +
@@ -351,7 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
             type: "adjustThreshold",
             cardId: id,
             adjustment: -1,
-          })
+          }),
         );
 
         // 2. Оновлюємо внутрішній стан, щоб заблокувати кнопку -
@@ -371,7 +381,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const sec = Number(intInput.value);
         if (!Number.isNaN(sec) && sec >= 1)
           ws.send(
-            JSON.stringify({ type: "setPollIntervalMs", id, value: sec * 1000 })
+            JSON.stringify({
+              type: "setPollIntervalMs",
+              id,
+              value: sec * 1000,
+            }),
           );
       };
 
@@ -420,7 +434,7 @@ function playAlertSound() {
       // Браузери часто блокують відтворення без попередньої взаємодії користувача.
       console.warn("❌ Помилка відтворення звуку: ", error);
       console.warn(
-        "Впевніться, що користувач взаємодіяв зі сторінкою хоча б один раз."
+        "Впевніться, що користувач взаємодіяв зі сторінкою хоча б один раз.",
       );
     });
   }
@@ -443,7 +457,7 @@ function startModalTimer() {
   console.log(
     `[Frontend] Таймер активності встановлено на ${
       MODAL_INTERVAL_MS / 60000
-    } хвилин.`
+    } хвилин.`,
   );
 }
 
@@ -454,7 +468,7 @@ document.addEventListener("DOMContentLoaded", startModalTimer);
 if (refreshButton) {
   refreshButton.onclick = () => {
     console.log(
-      "[Frontend] Оператор підтвердив активність. Оновлення сторінки..."
+      "[Frontend] Оператор підтвердив активність. Оновлення сторінки...",
     );
 
     // Перезавантажуємо сторінку

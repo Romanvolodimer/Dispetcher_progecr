@@ -1,9 +1,9 @@
 // ---- робота з усіма картами
-const cards = [1, 2, 3];
+const cards = [1, 2, 3, 4];
 
 // ---- підключення WebSocket
 const ws = new WebSocket(
-  `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`
+  `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`,
 );
 
 ws.onopen = () => {
@@ -22,12 +22,14 @@ ws.onmessage = (ev) => {
     valEl.textContent = isNaN(v) ? "—" : v;
     valEl.dataset.value = v; // збережемо останнє значення
     document.getElementById(`status${id}`).textContent = `Оновлено: ${new Date(
-      data.ts
+      data.ts,
     ).toLocaleString()}`;
 
     // ---- розсилаємо подію для другого скрипта
     document.dispatchEvent(
-      new CustomEvent("metricUpdate", { detail: { id, value: v, ts: data.ts } })
+      new CustomEvent("metricUpdate", {
+        detail: { id, value: v, ts: data.ts },
+      }),
     );
   }
 
@@ -40,6 +42,9 @@ ws.onclose = () => {
 };
 
 // ---- антизасинання
-setInterval(() => {
-  fetch("/ping", { cache: "no-store" }).catch(() => {});
-}, 4 * 60 * 1000);
+setInterval(
+  () => {
+    fetch("/ping", { cache: "no-store" }).catch(() => {});
+  },
+  4 * 60 * 1000,
+);

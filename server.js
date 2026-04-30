@@ -217,21 +217,6 @@ function sendConfigAll(ws) {
   // сторінка метрики
 
   const page4 = await browser.newPage();
-
-  // 🔍 ДЕБАГ
-  console.log("LOGIN_URL_3:", LOGIN_URL_3);
-  console.log("PAGE_3:", PAGE_3);
-
-  const base3_fixed = new URL(LOGIN_URL_3).origin;
-  const url3 = new URL(PAGE_3, base3_fixed).href;
-
-  console.log("➡️ FINAL URL:", url3);
-
-  // 👉 перевірка перед переходом
-  if (!PAGE_3) {
-    throw new Error("❌ PAGE_3 не заданий в Render Environment");
-  }
-
   await page4.goto(url3, { waitUntil: "networkidle2" });
 
   // --- Сторінки з метриками ---
@@ -438,6 +423,7 @@ function sendConfigAll(ws) {
                   { id: 1, threshold: TH1, pollIntervalMs: INTERVAL_MS },
                   { id: 2, threshold: TH2, pollIntervalMs: INTERVAL_MS },
                   { id: 3, threshold: TH3, pollIntervalMs: INTERVAL_MS },
+                  { id: 4, threshold: TH4, pollIntervalMs: INTERVAL_MS },
                 ],
               });
 
@@ -500,6 +486,7 @@ function sendConfigAll(ws) {
                 { id: 1, threshold: TH1, pollIntervalMs: INTERVAL_MS },
                 { id: 2, threshold: TH2, pollIntervalMs: INTERVAL_MS },
                 { id: 3, threshold: TH3, pollIntervalMs: INTERVAL_MS },
+                { id: 4, threshold: TH4, pollIntervalMs: INTERVAL_MS },
               ],
             });
             broadcast({
