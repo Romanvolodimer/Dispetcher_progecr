@@ -169,7 +169,14 @@ function sendConfigAll(ws) {
 (async () => {
   const browser = await puppeteer.launch({
     headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--no-zygote",
+      "--single-process",
+    ],
   });
 
   // --- 1. Перша система ---
@@ -198,26 +205,23 @@ function sendConfigAll(ws) {
   console.log("✅ Авторизація 2 успішна");
 
   // === 3. Третя система ===
-  const base3 = LOGIN_URL_3.replace("/login.php", "");
-  const pageLogin3 = await browser.newPage();
+  const page4 = await browser.newPage();
 
   console.log("🔐 Логін у систему 3...");
-  await pageLogin3.goto(LOGIN_URL_3, { waitUntil: "networkidle2" });
+  await page4.goto(LOGIN_URL_3, { waitUntil: "networkidle2" });
 
-  await pageLogin3.type(USERNAME_SELECTOR_3, USERNAME_3);
-  await pageLogin3.type(PASSWORD_SELECTOR_3, PASSWORD_3);
+  await page4.type(USERNAME_SELECTOR_3, USERNAME_3);
+  await page4.type(PASSWORD_SELECTOR_3, PASSWORD_3);
 
   await Promise.all([
-    pageLogin3.click(SUBMIT_SELECTOR_3),
-    pageLogin3.waitForNavigation({ waitUntil: "networkidle2" }),
+    page4.click(SUBMIT_SELECTOR_3),
+    page4.waitForNavigation({ waitUntil: "networkidle2" }),
   ]);
 
   console.log("✅ Авторизація 3 успішна");
 
-  // --- Сторінка метрики ---
-
-  const page4 = await browser.newPage();
-  await page4.goto(base3, { waitUntil: "networkidle2" });
+  // 👉 ПЕРЕХІД НА СТОРІНКУ МЕТРИКИ В ТІЙ ЖЕ ВКЛАДЦІ
+  await page4.goto(PAGE_3, { waitUntil: "networkidle2" });
 
   // --- Сторінки з метриками ---
   const page2 = await browser.newPage();
