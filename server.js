@@ -215,8 +215,24 @@ function sendConfigAll(ws) {
   console.log("✅ Авторизація 3 успішна");
 
   // сторінка метрики
+  // сторінка метрики (СИСТЕМА 3)
   const page4 = await browser.newPage();
-  await page4.goto(`${base3}${PAGE_3}`, { waitUntil: "networkidle2" });
+
+  // 🔍 ДЕБАГ
+  console.log("LOGIN_URL_3:", LOGIN_URL_3);
+  console.log("PAGE_3:", PAGE_3);
+
+  const base3 = new URL(LOGIN_URL_3).origin;
+  const url3 = new URL(PAGE_3, base3).href;
+
+  console.log("➡️ FINAL URL:", url3);
+
+  // 👉 перевірка перед переходом
+  if (!PAGE_3) {
+    throw new Error("❌ PAGE_3 не заданий в Render Environment");
+  }
+
+  await page4.goto(url3, { waitUntil: "networkidle2" });
 
   // --- Сторінки з метриками ---
   const page2 = await browser.newPage();
