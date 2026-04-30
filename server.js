@@ -257,6 +257,7 @@ function sendConfigAll(ws) {
         if (id === 1) TH1 = dynamicThreshold;
         else if (id === 2) TH2 = dynamicThreshold;
         else if (id === 3) TH3 = dynamicThreshold;
+        else if (id === 4) TH4 = dynamicThreshold;
       }
     } catch (dbError) {
       console.error(`❌ Помилка БД при отриманні порогу: ${dbError.message}`);
@@ -361,7 +362,7 @@ function sendConfigAll(ws) {
           const adjustmentSign = Math.sign(Number(data.adjustment));
           const installationName = CARD_TO_INSTALLATION_MAP[cardId];
 
-          if (cardId >= 1 && cardId <= 3) {
+          if (cardId >= 1 && cardId <= 4) {
             // 💡 ВИПРАВЛЕНО: Отримуємо дату та годину з БД для уникнення проблем з часовими поясами
             const { date: currentDateString, hour: currentHour } =
               await getCurrentDateTimeFromDB();
@@ -397,6 +398,7 @@ function sendConfigAll(ws) {
                 if (cardId === 1) currentThreshold = TH1;
                 else if (cardId === 2) currentThreshold = TH2;
                 else if (cardId === 3) currentThreshold = TH3;
+                else if (cardId === 4) currentThreshold = TH4;
               }
 
               let newThreshold = currentThreshold + adjustmentAmount;
@@ -419,6 +421,7 @@ function sendConfigAll(ws) {
               if (cardId === 1) TH1 = newThreshold;
               else if (cardId === 2) TH2 = newThreshold;
               else if (cardId === 3) TH3 = newThreshold;
+              else if (cardId === 4) TH4 = newThreshold;
 
               // 6. Надсилаємо оновлення клієнтам
               broadcast({
