@@ -28,10 +28,10 @@ function addLog(id, msg) {
 }
 
 // ---- робота з усіма картами
-const cards = [1, 2, 3];
+const cards = [1, 2, 3, 4];
 
 const ws = new WebSocket(
-  `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`
+  `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`,
 );
 
 ws.onopen = () => {
@@ -49,10 +49,10 @@ ws.onmessage = (ev) => {
       document.getElementById(`thr${id}`).textContent = cfg.threshold;
       document.getElementById(`thresholdInput${id}`).value = cfg.threshold;
       document.getElementById(`intervalInput${id}`).value = Math.round(
-        cfg.pollIntervalMs / 1000
+        cfg.pollIntervalMs / 1000,
       );
       document.getElementById(`interval${id}`).textContent = `${Math.round(
-        cfg.pollIntervalMs / 1000
+        cfg.pollIntervalMs / 1000,
       )} с`;
     });
   }
@@ -71,7 +71,7 @@ ws.onmessage = (ev) => {
     valEl.classList.toggle("ok", !bad);
 
     document.getElementById(`status${id}`).textContent = `Оновлено: ${new Date(
-      data.ts
+      data.ts,
     ).toLocaleString()}`;
   }
 
@@ -110,7 +110,7 @@ cards.forEach((id) => {
     const sec = Number(document.getElementById(`intervalInput${id}`).value);
     if (!Number.isNaN(sec) && sec >= 1)
       ws.send(
-        JSON.stringify({ type: "setPollIntervalMs", id, value: sec * 1000 })
+        JSON.stringify({ type: "setPollIntervalMs", id, value: sec * 1000 }),
       );
   };
   document.getElementById(`checkNow${id}`).onclick = () =>
@@ -133,6 +133,7 @@ const state = {
   1: { muted: false },
   2: { muted: false },
   3: { muted: false },
+  4: { muted: false },
 };
 
 function beep(cardId, durationMs = 1200, freq = 660) {
@@ -185,7 +186,7 @@ function initCard(cardId) {
   const ws = new WebSocket(
     `${location.protocol === "https:" ? "wss" : "ws"}://${
       location.host
-    }?card=${cardId}`
+    }?card=${cardId}`,
   );
 
   ws.onopen = () => {
@@ -240,19 +241,15 @@ function initCard(cardId) {
     const sec = Number(intervalInput.value);
     if (!Number.isNaN(sec) && sec >= 1) {
       ws.send(
-        JSON.stringify({ type: "setPollIntervalMs", value: sec * 1000, cardId })
+        JSON.stringify({
+          type: "setPollIntervalMs",
+          value: sec * 1000,
+          cardId,
+        }),
       );
     }
   };
 }
 
 // ---- ініціалізація трьох карт
-[1, 2, 3].forEach(initCard);
-
-// ---- “антизасинання” (пінг бекенду)
-const PING_INTERVAL_MS = 4 * 60 * 1000;
-setInterval(() => {
-  fetch("/ping", { cache: "no-store" })
-    .then(() => console.log(`[ping] ${new Date().toLocaleTimeString()}`))
-    .catch((err) => console.warn("[ping error]", err));
-}, PING_INTERVAL_MS);
+[1, 2, 3, 4].forEach(initCard);

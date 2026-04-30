@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
     logEl.prepend(line);
 
     // Обмеження до 10 логів
-    while (logEl.children.length > 10) {
+    while (logEl.children.length > 4) {
       logEl.removeChild(logEl.lastChild);
     }
   }
@@ -159,6 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ws.onmessage = (ev) => {
     const data = JSON.parse(ev.data);
     const id = data.id;
+    lastMessageTime = Date.now(); // 🔥 ОБОВʼЯЗКОВО
 
     // ---- отримали налаштування всіх карт
     if (data.type === "configAll") {
@@ -279,6 +280,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   ws.onclose = () => {
     cards.forEach((id) => addLog(id, "🔴 З'єднання розірвано"));
+    showModal("🔌 З'єднання з сервером втрачено");
+  };
+  ws.onerror = () => {
+    showModal("❌ Помилка з'єднання");
   };
 
   // ---- обробка кнопок для кожної карти
@@ -407,71 +412,71 @@ document.addEventListener("DOMContentLoaded", () => {
   }, PING_INTERVAL_MS);
 });
 
-// --- ЛОГІКА АВТОМАТИЧНОГО ПЕРЕЗАВАНТАЖЕННЯ ТА ПІДТВЕРДЖЕННЯ АКТИВНОСТІ ---
+// --- АНТИ-ЗАВИСАННЯ / КОНТРОЛЬ З'ЄДНАННЯ ---
 
-// Інтервал, через який з'явиться модальне вікно (60 хвилин)
-const MODAL_INTERVAL_MS = 60 * 60 * 1000;
+// через скільки вважати що система "зависла"
+const CONNECTION_TIMEOUT_MS = 20000; // 20 сек
 
-// Елементи модального вікна та аудіо
+// перевірка кожні N секунд
+const CHECK_INTERVAL_MS = 3000;
+
+// елементи
 const modal = document.getElementById("activityModal");
 const refreshButton = document.getElementById("modalRefreshButton");
 const alertSound = document.getElementById("alertSound");
 
-let modalTimer;
+let connectionTimer;
+let lastMessageTime = Date.now();
 
-/**
- * 💡 ФУНКЦІЯ ВІДТВОРЕННЯ ЗВУКУ
- * Спроба відтворити аудіо, обходячи обмеження браузера.
- */
+// 🔊 звук
 function playAlertSound() {
   if (alertSound) {
-    // Зупиняємо попереднє відтворення, якщо воно ще триває
     alertSound.pause();
     alertSound.currentTime = 0;
 
-    // Відтворюємо звук
     alertSound.play().catch((error) => {
-      // Браузери часто блокують відтворення без попередньої взаємодії користувача.
-      console.warn("❌ Помилка відтворення звуку: ", error);
-      console.warn(
-        "Впевніться, що користувач взаємодіяв зі сторінкою хоча б один раз.",
-      );
+      console.warn("❌ Помилка відтворення звуку:", error);
     });
   }
 }
 
-function startModalTimer() {
-  // Очистити попередній таймер, якщо він існує
-  if (modalTimer) {
-    clearTimeout(modalTimer);
-  }
+// 🚨 показ модалки
+function showModal(message) {
+  console.warn("🚨 SHOW MODAL:", message);
 
-  modalTimer = setTimeout(() => {
-    // Час вийшов, показуємо модальне вікно
-    if (modal) modal.classList.remove("modal-hidden");
+  if (modal) modal.classList.remove("modal-hidden");
 
-    // 💡 КЛЮЧОВА ЗМІНА: Викликаємо відтворення звуку
-    playAlertSound();
-  }, MODAL_INTERVAL_MS);
+  const text = document.getElementById("modalText");
+  if (text && message) text.textContent = message;
 
-  console.log(
-    `[Frontend] Таймер активності встановлено на ${
-      MODAL_INTERVAL_MS / 60000
-    } хвилин.`,
-  );
+  playAlertSound();
 }
 
-// Запускаємо таймер одразу після завантаження сторінки
-document.addEventListener("DOMContentLoaded", startModalTimer);
+// 🧠 watchdog (контроль активності)
+function startConnectionWatchdog() {
+  if (connectionTimer) clearInterval(connectionTimer);
 
-// Обробник натискання кнопки
+  connectionTimer = setInterval(() => {
+    const now = Date.now();
+    const diff = now - lastMessageTime;
+
+    if (diff > CONNECTION_TIMEOUT_MS) {
+      showModal("❌ Немає даних. Можливе зависання системи.");
+    }
+  }, CHECK_INTERVAL_MS);
+
+  console.log("🧠 Watchdog запущено");
+}
+
+// 🚀 запуск після завантаження
+document.addEventListener("DOMContentLoaded", () => {
+  startConnectionWatchdog();
+});
+
+// 🔁 кнопка "перезавантажити"
 if (refreshButton) {
   refreshButton.onclick = () => {
-    console.log(
-      "[Frontend] Оператор підтвердив активність. Оновлення сторінки...",
-    );
-
-    // Перезавантажуємо сторінку
+    console.log("🔄 Перезавантаження сторінки...");
     window.location.reload();
   };
 }
