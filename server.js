@@ -74,10 +74,18 @@ const requiredEnv = [
   "SUBMIT_SELECTOR_2",
   "METRIC_SELECTOR_2A",
   "METRIC_SELECTOR_2B",
+  "LOGIN_URL_3",
+  "USERNAME_3",
+  "PASSWORD_3",
+  "USERNAME_SELECTOR_3",
+  "PASSWORD_SELECTOR_3",
+  "SUBMIT_SELECTOR_3",
+  "METRIC_SELECTOR_3",
+  "PAGE_3",
 ];
 
 const missing = requiredEnv.filter(
-  (k) => !process.env[k] || process.env[k].trim() === ""
+  (k) => !process.env[k] || process.env[k].trim() === "",
 );
 if (missing.length) {
   console.error("❌ У файлі .env відсутні або порожні такі змінні:");
@@ -101,12 +109,21 @@ const {
   SUBMIT_SELECTOR_2,
   METRIC_SELECTOR_2A,
   METRIC_SELECTOR_2B,
+  LOGIN_URL_3,
+  USERNAME_3,
+  PASSWORD_3,
+  USERNAME_SELECTOR_3,
+  PASSWORD_SELECTOR_3,
+  SUBMIT_SELECTOR_3,
+  METRIC_SELECTOR_3,
+  PAGE_3,
 } = process.env;
 
 // 💡 ПОЧАТКОВЕ ЗАВАНТАЖЕННЯ: Статичні/Запасні пороги
 let TH1 = Number(process.env.THRESHOLD_1 || "0");
 let TH2 = Number(process.env.THRESHOLD_2 || "0");
 let TH3 = Number(process.env.THRESHOLD_3 || "0");
+let TH4 = Number(process.env.THRESHOLD_4 || "0");
 
 let INTERVAL_MS = Number(process.env.POLL_INTERVAL || "15") * 1000;
 const PORT = Number(process.env.PORT || 3000);
@@ -116,6 +133,7 @@ const CARD_TO_INSTALLATION_MAP = {
   1: "КГУ1",
   2: "КГУ2",
   3: "КГУ3",
+  4: "КГУ4",
 };
 
 app.get("/ping", (_req, res) => res.status(200).send("ok"));
@@ -142,6 +160,7 @@ function sendConfigAll(ws) {
     { id: 1, threshold: TH1, pollIntervalMs: INTERVAL_MS },
     { id: 2, threshold: TH2, pollIntervalMs: INTERVAL_MS },
     { id: 3, threshold: TH3, pollIntervalMs: INTERVAL_MS },
+    { id: 4, threshold: TH4, pollIntervalMs: INTERVAL_MS },
   ];
   ws?.send(JSON.stringify({ type: "configAll", cards }));
 }
@@ -178,6 +197,27 @@ function sendConfigAll(ws) {
   ]);
   console.log("✅ Авторизація 2 успішна");
 
+  // === 3. Третя система ===
+  const base3 = LOGIN_URL_3.replace("/login.php", "");
+  const pageLogin3 = await browser.newPage();
+
+  console.log("🔐 Логін у систему 3...");
+  await pageLogin3.goto(LOGIN_URL_3, { waitUntil: "networkidle2" });
+
+  await pageLogin3.type(USERNAME_SELECTOR_3, USERNAME_3);
+  await pageLogin3.type(PASSWORD_SELECTOR_3, PASSWORD_3);
+
+  await Promise.all([
+    pageLogin3.click(SUBMIT_SELECTOR_3),
+    pageLogin3.waitForNavigation({ waitUntil: "networkidle2" }),
+  ]);
+
+  console.log("✅ Авторизація 3 успішна");
+
+  // сторінка метрики
+  const page4 = await browser.newPage();
+  await page4.goto(`${base3}${PAGE_3}`, { waitUntil: "networkidle2" });
+
   // --- Сторінки з метриками ---
   const page2 = await browser.newPage();
   const page3 = await browser.newPage();
@@ -202,7 +242,7 @@ function sendConfigAll(ws) {
       const dynamicThreshold = await getHourlyThreshold(
         installationName,
         currentDateString,
-        currentHour
+        currentHour,
       );
 
       if (dynamicThreshold !== null && !Number.isNaN(dynamicThreshold)) {
@@ -222,7 +262,7 @@ function sendConfigAll(ws) {
       const value = await getCapacityValueForHour(
         installationName,
         currentDateString,
-        currentHour
+        currentHour,
       );
 
       if (value !== null && !Number.isNaN(value) && value > 0) {
@@ -232,7 +272,7 @@ function sendConfigAll(ws) {
       }
     } catch (err) {
       console.warn(
-        `⚠️ Помилка отримання Capacity Value для ${installationName}: ${err.message}. Використовується 1 МВт.`
+        `⚠️ Помилка отримання Capacity Value для ${installationName}: ${err.message}. Використовується 1 МВт.`,
       );
       capacityValue = 1;
     }
@@ -241,12 +281,12 @@ function sendConfigAll(ws) {
     try {
       await page.waitForSelector(selector, { timeout: 15000 });
       const raw = await page.$eval(selector, (el) =>
-        (el.innerText || el.textContent || "").trim()
+        (el.innerText || el.textContent || "").trim(),
       );
       const num = Number(
         String(raw)
           .replace(/[^\d.,-]/g, "")
-          .replace(",", ".")
+          .replace(",", "."),
       );
       const ts = new Date().toISOString();
 
@@ -290,6 +330,7 @@ function sendConfigAll(ws) {
     await checkMetric(page1, METRIC_SELECTOR_1, 1, TH1);
     await checkMetric(page2, METRIC_SELECTOR_2A, 2, TH2);
     await checkMetric(page3, METRIC_SELECTOR_2B, 3, TH3);
+    await checkMetric(page4, METRIC_SELECTOR_3, 4, TH4);
   }
 
   await checkAll();
@@ -325,7 +366,7 @@ function sendConfigAll(ws) {
               let capacityValueMW = await getCapacityValueForHour(
                 installationName,
                 currentDateString,
-                currentHour
+                currentHour,
               );
 
               if (
@@ -343,7 +384,7 @@ function sendConfigAll(ws) {
               let currentThreshold = await getHourlyThreshold(
                 installationName,
                 currentDateString,
-                currentHour
+                currentHour,
               );
 
               if (currentThreshold === null || Number.isNaN(currentThreshold)) {
@@ -365,7 +406,7 @@ function sendConfigAll(ws) {
                 installationName,
                 currentDateString,
                 currentHour,
-                newThreshold
+                newThreshold,
               );
 
               // 5. Оновлюємо глобальні пороги (вони будуть перезаписані при наступному checkMetric,
@@ -393,7 +434,7 @@ function sendConfigAll(ws) {
               });
             } catch (dbError) {
               console.error(
-                `❌ Помилка БД при коригуванні порогу: ${dbError.message}`
+                `❌ Помилка БД при коригуванні порогу: ${dbError.message}`,
               );
               broadcast({
                 type: "error",
@@ -412,6 +453,7 @@ function sendConfigAll(ws) {
             if (data.id === 1) TH1 = v;
             if (data.id === 2) TH2 = v;
             if (data.id === 3) TH3 = v;
+            if (data.id === 4) TH4 = v;
 
             broadcast({
               type: "configAll",
@@ -419,6 +461,7 @@ function sendConfigAll(ws) {
                 { id: 1, threshold: TH1, pollIntervalMs: INTERVAL_MS },
                 { id: 2, threshold: TH2, pollIntervalMs: INTERVAL_MS },
                 { id: 3, threshold: TH3, pollIntervalMs: INTERVAL_MS },
+                { id: 4, threshold: TH4, pollIntervalMs: INTERVAL_MS },
               ],
             });
             broadcast({
@@ -447,7 +490,7 @@ function sendConfigAll(ws) {
               type: "info",
               id: data.id,
               message: `Інтервал опитування оновлено до ${Math.round(
-                INTERVAL_MS / 1000
+                INTERVAL_MS / 1000,
               )} с`,
             });
           }

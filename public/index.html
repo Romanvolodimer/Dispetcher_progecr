@@ -197,6 +197,33 @@
 
             <div id="log3" class="log"></div>
         </div>
+
+        <div class="card" id="card4">
+            <h1>Моніторинг МІТРАКОН</h1>
+
+            <div class="row">
+                <div>Поточна потужність: <span id="val4" class="value">—</span></div>
+                <div class="chip">Поріг: <span id="thr4">—</span></div>
+            </div>
+
+            <div class="muted" id="status4">Очікую дані…</div>
+
+            <div class="row" style="margin-top: .75rem;">
+                <button id="test4">Перевірити звук</button>
+                <button id="mute4">🔇 Вимкнути звук</button>
+                <button id="unmute4">🔊 Увімкнути звук</button>
+            </div>
+
+            <div class="controls">
+                <label>Коригування порогу (крок x1000):</label>
+                <div style="display:flex; gap:.5rem;">
+                    <button id="setPositiveThreshold4" class="btn-adjust-threshold">+</button>
+                    <button id="setNegativeThreshold4" class="btn-adjust-threshold">-</button>
+                </div>
+            </div>
+
+            <div id="log4" class="log"></div>
+        </div>
     </div>
 
     <div id="activityModal" class="modal-hidden">
