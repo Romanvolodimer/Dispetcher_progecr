@@ -216,8 +216,8 @@ function sendConfigAll(ws) {
 
   // сторінка метрики
 
-  const page4 = await browser.newPage();
-  await page4.goto(url3, { waitUntil: "networkidle2" });
+  // const page4 = await browser.newPage();
+  // await page4.goto(url3, { waitUntil: "networkidle2" });
 
   // --- Сторінки з метриками ---
   const page2 = await browser.newPage();
