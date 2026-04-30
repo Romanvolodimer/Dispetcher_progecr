@@ -177,10 +177,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // ✅ Оновлення UI
         if (thrEl) thrEl.textContent = cfg.threshold;
-        document.getElementById(`interval${cardId}`).textContent =
-          `${Math.round(cfg.pollIntervalMs / 1000)} с`;
 
-        // 💡 Оновлюємо стан кнопок після отримання конфігурації (може бути після коригування)
+        const intervalEl = document.getElementById(`interval${cardId}`);
+        if (intervalEl) {
+          intervalEl.textContent = `${Math.round(cfg.pollIntervalMs / 1000)} с`;
+        }
+
+        // 💡 Оновлюємо стан кнопок
         updateButtonStates(cardId);
       });
     }
