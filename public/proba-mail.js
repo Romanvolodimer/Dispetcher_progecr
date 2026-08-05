@@ -4,7 +4,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   // ---- Спільний стан для звуку та керування
   let audioCtx = null;
-  const cards = [1, 2, 3, 4];
+  const cards = [1, 2, 3, 4, 5]; // 💡 ДОДАНО КАРТУ 5
 
   // 💡 КЛЮЧОВА ЗМІНА 1: Стан для керування звуком
   const cardMuteState = {
@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     2: { muted: false },
     3: { muted: false },
     4: { muted: false },
+    5: { muted: false },
   };
 
   // 💡 КЛЮЧОВА ЗМІНА 2: Стан для порогів, LRV ТА КЕРУВАННЯ КНОПКАМИ
@@ -35,6 +36,12 @@ document.addEventListener("DOMContentLoaded", () => {
       resetHour: new Date().getHours() + 1,
     },
     4: {
+      threshold: 0,
+      lrv: 0,
+      lastAction: null,
+      resetHour: new Date().getHours() + 1,
+    },
+    5: {
       threshold: 0,
       lrv: 0,
       lastAction: null,

@@ -1,5 +1,5 @@
 // ---- робота з усіма картами
-const cards = [1, 2, 3, 4];
+const cards = [1, 2, 3, 4, 5];
 
 // ---- підключення WebSocket
 const ws = new WebSocket(

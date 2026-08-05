@@ -28,7 +28,7 @@ function addLog(id, msg) {
 }
 
 // ---- робота з усіма картами
-const cards = [1, 2, 3, 4];
+const cards = [1, 2, 3, 4, 5];
 
 const ws = new WebSocket(
   `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`,
@@ -252,4 +252,4 @@ function initCard(cardId) {
 }
 
 // ---- ініціалізація трьох карт
-[1, 2, 3, 4].forEach(initCard);
+[1, 2, 3, 4, 5].forEach(initCard);

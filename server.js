@@ -124,6 +124,7 @@ let TH1 = Number(process.env.THRESHOLD_1 || "0");
 let TH2 = Number(process.env.THRESHOLD_2 || "0");
 let TH3 = Number(process.env.THRESHOLD_3 || "0");
 let TH4 = Number(process.env.THRESHOLD_4 || "0");
+let TH5 = Number(process.env.THRESHOLD_5 || "0");
 
 let INTERVAL_MS = Number(process.env.POLL_INTERVAL || "15") * 1000;
 const PORT = Number(process.env.PORT || 3000);
@@ -134,15 +135,46 @@ const CARD_TO_INSTALLATION_MAP = {
   2: "КГУ2",
   3: "КГУ3",
   4: "КГУ4",
+  5: "КГУ5",
 };
 
 app.get("/ping", (_req, res) => res.status(200).send("ok"));
 
-const server = app.listen(PORT, () => {
-  console.log(`✅ Веб інтерфейс: http://localhost:${PORT}`);
-});
+let wss;
+let server;
 
-const wss = new WebSocketServer({ server });
+async function startServer(port) {
+  return new Promise((resolve, reject) => {
+    const httpServer = app.listen(port, () => {
+      console.log(`✅ Веб інтерфейс: http://localhost:${port}`);
+      wss = new WebSocketServer({ server: httpServer });
+      resolve(httpServer);
+    });
+
+    httpServer.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        if (!process.env.PORT) {
+          const fallbackPort = port + 1;
+          console.log(
+            `⚠️ Порт ${port} зайнятий. Спробую запуститися на ${fallbackPort}...`,
+          );
+          resolve(startServer(fallbackPort));
+          return;
+        }
+
+        console.error(
+          `❌ Порт ${port} вже зайнятий. Змініть PORT або завершіть інший процес.`,
+        );
+        reject(err);
+        return;
+      }
+
+      reject(err);
+    });
+  });
+}
+
+server = await startServer(PORT);
 
 // --- надсилання WS-повідомлення всім клієнтам
 function broadcast(obj) {
@@ -161,86 +193,118 @@ function sendConfigAll(ws) {
     { id: 2, threshold: TH2, pollIntervalMs: INTERVAL_MS },
     { id: 3, threshold: TH3, pollIntervalMs: INTERVAL_MS },
     { id: 4, threshold: TH4, pollIntervalMs: INTERVAL_MS },
+    { id: 5, threshold: TH5, pollIntervalMs: INTERVAL_MS },
   ];
   ws?.send(JSON.stringify({ type: "configAll", cards }));
 }
 
 // === Основна логіка Puppeteer ===
+async function safeNavigate(page, url, label, timeoutMs = 60000) {
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+    console.log(`✅ ${label}: сторінку відкрито (${url})`);
+    return true;
+  } catch (error) {
+    console.error(
+      `❌ ${label}: не вдалося відкрити ${url}. Причина: ${error.message}`,
+    );
+    throw error;
+  }
+}
+
 (async () => {
-  const browser = await puppeteer.launch({
-    headless: "new",
-    ignoreHTTPSErrors: true,
-    args: [
-      "--ignore-certificate-errors",
-      "--allow-running-insecure-content",
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--no-zygote",
-      "--single-process",
-    ],
-  });
+  let browser;
+  let page1;
+  let page2;
+  let page3;
+  let page4;
+  let pageLogin2;
 
-  // --- 1. Перша система ---
-  const page1 = await browser.newPage();
-  page1.on("requestfailed", (req) => {
-    console.log("❌ Failed:", req.url(), req.failure()?.errorText);
-  });
+  try {
+    browser = await puppeteer.launch({
+      executablePath:
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      headless: true,
+      ignoreHTTPSErrors: true,
+      args: [
+        "--ignore-certificate-errors",
+        "--allow-running-insecure-content",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+      ],
+    });
 
-  page1.on("response", (res) => {
-    console.log("✅", res.status(), res.url());
-  });
+    // --- 1. Перша система ---
+    page1 = await browser.newPage();
 
-  await page1.goto(LOGIN_URL_1, { waitUntil: "networkidle2" });
-  console.log("🔐 Логін у систему 1...");
-  await page1.type(USERNAME_SELECTOR_1, USERNAME_1);
-  await page1.type(PASSWORD_SELECTOR_1, PASSWORD_1);
-  await Promise.all([
-    page1.click(SUBMIT_SELECTOR_1),
-    page1.waitForNavigation({ waitUntil: "networkidle2" }),
-  ]);
-  console.log("✅ Авторизація 1 успішна");
+    await safeNavigate(page1, LOGIN_URL_1, "Логін у систему 1");
+    console.log("🔐 Логін у систему 1...");
+    await page1.type(USERNAME_SELECTOR_1, USERNAME_1);
+    await page1.type(PASSWORD_SELECTOR_1, PASSWORD_1);
+    await Promise.all([
+      page1.click(SUBMIT_SELECTOR_1),
+      page1.waitForNavigation({
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      }),
+    ]);
+    console.log("✅ Авторизація 1 успішна");
 
-  // --- 2. Друга система ---
-  const base2 = LOGIN_URL_2.replace("/login.php", "");
-  const pageLogin2 = await browser.newPage();
-  console.log("🔐 Логін у систему 2...");
-  await pageLogin2.goto(LOGIN_URL_2, { waitUntil: "networkidle2" });
-  await pageLogin2.type(USERNAME_SELECTOR_2, USERNAME_2);
-  await pageLogin2.type(PASSWORD_SELECTOR_2, PASSWORD_2);
-  await Promise.all([
-    pageLogin2.click(SUBMIT_SELECTOR_2),
-    pageLogin2.waitForNavigation({ waitUntil: "networkidle2" }),
-  ]);
-  console.log("✅ Авторизація 2 успішна");
+    // --- 2. Друга система ---
+    const base2 = LOGIN_URL_2.replace("/login.php", "");
+    pageLogin2 = await browser.newPage();
+    console.log("🔐 Логін у систему 2...");
+    await safeNavigate(pageLogin2, LOGIN_URL_2, "Логін у систему 2");
+    await pageLogin2.type(USERNAME_SELECTOR_2, USERNAME_2);
+    await pageLogin2.type(PASSWORD_SELECTOR_2, PASSWORD_2);
+    await Promise.all([
+      pageLogin2.click(SUBMIT_SELECTOR_2),
+      pageLogin2.waitForNavigation({
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      }),
+    ]);
+    console.log("✅ Авторизація 2 успішна");
 
-  // === 3. Третя система ===
-  const page4 = await browser.newPage();
+    // === 3. Третя система ===
+    page4 = await browser.newPage();
 
-  console.log("🔐 Логін у систему 3...");
-  await page4.goto(LOGIN_URL_3, { waitUntil: "networkidle2" });
+    console.log("🔐 Логін у систему 3...");
+    await safeNavigate(page4, LOGIN_URL_3, "Логін у систему 3");
 
-  await page4.type(USERNAME_SELECTOR_3, USERNAME_3);
-  await page4.type(PASSWORD_SELECTOR_3, PASSWORD_3);
+    await page4.type(USERNAME_SELECTOR_3, USERNAME_3);
+    await page4.type(PASSWORD_SELECTOR_3, PASSWORD_3);
 
-  await Promise.all([
-    page4.click(SUBMIT_SELECTOR_3),
-    page4.waitForNavigation({ waitUntil: "networkidle2" }),
-  ]);
+    await Promise.all([
+      page4.click(SUBMIT_SELECTOR_3),
+      page4.waitForNavigation({
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      }),
+    ]);
 
-  console.log("✅ Авторизація 3 успішна");
+    console.log("✅ Авторизація 3 успішна");
 
-  // 👉 ПЕРЕХІД НА СТОРІНКУ МЕТРИКИ В ТІЙ ЖЕ ВКЛАДЦІ
-  await page4.goto(PAGE_3, { waitUntil: "networkidle2" });
+    // 👉 ПЕРЕХІД НА СТОРІНКУ МЕТРИКИ В ТІЙ ЖЕ ВКЛАДЦІ
+    await safeNavigate(page4, PAGE_3, "Перехід на сторінку метрик 3");
 
-  // --- Сторінки з метриками ---
-  const page2 = await browser.newPage();
-  const page3 = await browser.newPage();
-  await page2.goto(`${base2}/screen.php?id=1`, { waitUntil: "networkidle2" });
-  await page3.goto(`${base2}/screen.php?id=2`, { waitUntil: "networkidle2" });
+    // --- Сторінки з метриками ---
+    page2 = await browser.newPage();
+    page3 = await browser.newPage();
+    await safeNavigate(page2, `${base2}/screen.php?id=1`, "Сторінка 2");
+    await safeNavigate(page3, `${base2}/screen.php?id=2`, "Сторінка 3");
 
-  console.log("📊 Всі сторінки відкрито. Починаємо моніторинг...");
+    console.log("📊 Всі сторінки відкрито. Починаємо моніторинг...");
+  } catch (error) {
+    console.error("❌ Критична помилка запуску Puppeteer:", error.message);
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {}
+    }
+    return;
+  }
 
   // --- Отримання метрик ---
   async function checkMetric(page, selector, id, threshold) {
@@ -341,6 +405,88 @@ function sendConfigAll(ws) {
     }
   }
 
+  // --- додав АКОНІТ ---
+  async function checkMetricHttp(id, threshold) {
+    const installationName = CARD_TO_INSTALLATION_MAP[id];
+
+    const { date: currentDateString, hour: currentHour } =
+      await getCurrentDateTimeFromDB();
+
+    let thresholdUsed = threshold;
+    let capacityValue = 1;
+
+    // Отримуємо поріг із БД
+    try {
+      const dynamicThreshold = await getHourlyThreshold(
+        installationName,
+        currentDateString,
+        currentHour,
+      );
+
+      if (dynamicThreshold !== null && !Number.isNaN(dynamicThreshold)) {
+        thresholdUsed = dynamicThreshold;
+        TH5 = dynamicThreshold;
+      }
+    } catch (err) {
+      console.warn(`Помилка отримання порогу: ${err.message}`);
+    }
+
+    // Отримуємо LRV
+    try {
+      const value = await getCapacityValueForHour(
+        installationName,
+        currentDateString,
+        currentHour,
+      );
+
+      if (value !== null && !Number.isNaN(value) && value > 0) {
+        capacityValue = value;
+      }
+    } catch (err) {
+      console.warn(`Помилка отримання LRV: ${err.message}`);
+    }
+
+    try {
+      const response = await fetch("http://195.189.214.49:18380/");
+
+      const match = (await response.text()).match(/-?\d+/);
+
+      if (!match) {
+        throw new Error("На сторінці не знайдено число");
+      }
+
+      const num = -Number(match[0]);
+
+      const ts = new Date().toISOString();
+
+      broadcast({
+        type: "metric",
+        id,
+        value: num,
+        threshold: thresholdUsed,
+        lrv: capacityValue,
+        ts,
+      });
+
+      if (num < thresholdUsed - 100 || num > thresholdUsed + 100) {
+        broadcast({
+          type: "alert",
+          id,
+          value: num,
+          threshold: thresholdUsed,
+          ts,
+        });
+      }
+    } catch (err) {
+      broadcast({
+        type: "error",
+        id,
+        message: err.message,
+        ts: new Date().toISOString(),
+      });
+    }
+  }
+
   // --- Опитування всіх метрик ---
   async function checkAll() {
     // THx передається як запасний (fallback) поріг
@@ -348,6 +494,7 @@ function sendConfigAll(ws) {
     await checkMetric(page2, METRIC_SELECTOR_2A, 2, TH2);
     await checkMetric(page3, METRIC_SELECTOR_2B, 3, TH3);
     await checkMetric(page4, METRIC_SELECTOR_3, 4, TH4);
+    await checkMetricHttp(5, TH5);
   }
 
   await checkAll();
