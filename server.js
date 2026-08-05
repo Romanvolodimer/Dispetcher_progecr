@@ -169,7 +169,10 @@ function sendConfigAll(ws) {
 (async () => {
   const browser = await puppeteer.launch({
     headless: "new",
+    ignoreHTTPSErrors: true,
     args: [
+      "--ignore-certificate-errors",
+      "--allow-running-insecure-content",
       "--no-sandbox",
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
@@ -181,6 +184,14 @@ function sendConfigAll(ws) {
 
   // --- 1. Перша система ---
   const page1 = await browser.newPage();
+  page1.on("requestfailed", (req) => {
+    console.log("❌ Failed:", req.url(), req.failure()?.errorText);
+  });
+
+  page1.on("response", (res) => {
+    console.log("✅", res.status(), res.url());
+  });
+
   await page1.goto(LOGIN_URL_1, { waitUntil: "networkidle2" });
   console.log("🔐 Логін у систему 1...");
   await page1.type(USERNAME_SELECTOR_1, USERNAME_1);

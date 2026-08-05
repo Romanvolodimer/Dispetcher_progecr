@@ -224,6 +224,33 @@
 
             <div id="log4" class="log"></div>
         </div>
+
+        <div class="card" id="card5">
+            <h1>Моніторинг АКОНІТ</h1>
+
+            <div class="row">
+                <div>Поточна потужність: <span id="val5" class="value">—</span></div>
+                <div class="chip">Поріг: <span id="thr5">—</span></div>
+            </div>
+
+            <div class="muted" id="status5">Очікую дані…</div>
+
+            <div class="row" style="margin-top: .75rem;">
+                <button id="test5">Перевірити звук</button>
+                <button id="mute5">🔇 Вимкнути звук</button>
+                <button id="unmute5">🔊 Увімкнути звук</button>
+            </div>
+
+            <div class="controls">
+                <label>Коригування порогу (крок x1000):</label>
+                <div style="display:flex; gap:.5rem;">
+                    <button id="setPositiveThreshold5" class="btn-adjust-threshold">+</button>
+                    <button id="setNegativeThreshold5" class="btn-adjust-threshold">-</button>
+                </div>
+            </div>
+
+            <div id="log5" class="log"></div>
+        </div>
     </div>
 
     <div id="activityModal" class="modal-hidden">
