@@ -222,16 +222,14 @@ async function safeNavigate(page, url, label, timeoutMs = 60000) {
 
   try {
     browser = await puppeteer.launch({
-      executablePath:
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
       headless: true,
       ignoreHTTPSErrors: true,
       args: [
-        "--ignore-certificate-errors",
-        "--allow-running-insecure-content",
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
+        "--ignore-certificate-errors",
+        "--allow-running-insecure-content",
       ],
     });
 
