@@ -176,6 +176,20 @@ async function startServer(port) {
 
 server = await startServer(PORT);
 
+// === 🧠 MONITORING RAM ===
+setInterval(() => {
+  const memory = process.memoryUsage();
+
+  const rss = Math.round(memory.rss / 1024 / 1024);
+  const heapUsed = Math.round(memory.heapUsed / 1024 / 1024);
+  const heapTotal = Math.round(memory.heapTotal / 1024 / 1024);
+  const external = Math.round(memory.external / 1024 / 1024);
+
+  console.log(
+    `🧠 RAM | RSS: ${rss} MB | Heap: ${heapUsed}/${heapTotal} MB | External: ${external} MB`,
+  );
+}, 60_000);
+
 // --- надсилання WS-повідомлення всім клієнтам
 function broadcast(obj) {
   const data = JSON.stringify(obj);
