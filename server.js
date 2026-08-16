@@ -2,6 +2,7 @@ import express from "express";
 import { WebSocketServer } from "ws";
 import puppeteer from "puppeteer";
 import { exec } from "child_process";
+import fs from "fs";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -193,6 +194,25 @@ const serverData = await startServer(PORT);
 server = serverData.httpServer;
 wss = serverData.wsServer;
 
+function getContainerMemory() {
+  try {
+    const current = Number(
+      fs.readFileSync("/sys/fs/cgroup/memory.current", "utf8").trim(),
+    );
+
+    const maxRaw = fs.readFileSync("/sys/fs/cgroup/memory.max", "utf8").trim();
+
+    const max = maxRaw === "max" ? null : Number(maxRaw);
+
+    return {
+      currentMB: Math.round(current / 1024 / 1024),
+      maxMB: max ? Math.round(max / 1024 / 1024) : null,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
 // === 🧠 MONITORING RAM: NODE + CHROMIUM ===
 setInterval(() => {
   // RAM Node.js
@@ -240,6 +260,15 @@ setInterval(() => {
       console.log(
         `🌐 CHROME | Processes: ${processCount} | RSS: ${chromeMb} MB`,
       );
+
+      const containerMemory = getContainerMemory();
+
+      if (containerMemory) {
+        console.log(
+          `💾 CONTAINER | RAM: ${containerMemory.currentMB} MB` +
+            (containerMemory.maxMB ? ` / ${containerMemory.maxMB} MB` : ""),
+        );
+      }
     },
   );
 }, 60_000);
