@@ -222,18 +222,23 @@ setInterval(() => {
       console.log(
         `🌐 CHROME | Processes: ${processCount} | RSS: ${chromeMb} MB`,
       );
-
-      console.log(`📊 TOTAL APPROX | Node + Chrome: ${nodeRss + chromeMb} MB`);
     },
   );
 }, 60_000);
 
 // --- надсилання WS-повідомлення всім клієнтам
 function broadcast(obj) {
+  if (!wss) {
+    return;
+  }
+
   const data = JSON.stringify(obj);
+
   wss.clients.forEach((c) => {
     try {
-      c.send(data);
+      if (c.readyState === 1) {
+        c.send(data);
+      }
     } catch {}
   });
 }
