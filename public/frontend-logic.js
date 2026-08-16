@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
         g.gain.exponentialRampToValueAtTime(
           0.0001,
-          audioCtx.currentTime + 0.02
+          audioCtx.currentTime + 0.02,
         );
         o.stop(audioCtx.currentTime + 0.05);
       }, durationMs);
@@ -53,31 +53,35 @@ document.addEventListener("DOMContentLoaded", () => {
     log.prepend(line);
   }
 
-  // ---- ПОРОГИ (localStorage)
-  const STORAGE_KEY = "thresholds_v1";
-  let thresholds = {};
-  try {
-    thresholds = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-  } catch {
-    thresholds = {};
-  }
-  const defaultThresholds = { 1: 1900, 2: 2400, 3: 2400 };
+  // ---- ПОРОГИ
+  // Основний поріг приходить із сервера.
+  // Сервер бере його з PostgreSQL.
+
+  const thresholds = {};
 
   function getThreshold(id) {
-    return thresholds[id] ?? defaultThresholds[id];
-  }
-  function setThreshold(id, value) {
-    thresholds[id] = value;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(thresholds));
-    const thrEl = document.getElementById(`thr${id}`);
-    const inp = document.getElementById(`thresholdInput${id}`);
-    if (thrEl) thrEl.textContent = value;
-    if (inp) inp.value = value;
-    addLog(id, `⚙️ Встановлено локальний поріг: ${value}`);
+    return thresholds[id] ?? 0;
   }
 
+  function setThreshold(id, value) {
+    thresholds[id] = Number(value);
+
+    const thrEl = document.getElementById(`thr${id}`);
+
+    const inp = document.getElementById(`thresholdInput${id}`);
+
+    if (thrEl) {
+      thrEl.textContent = value;
+    }
+
+    if (inp) {
+      inp.value = value;
+    }
+
+    addLog(id, `⚙️ Встановлено поріг: ${value}`);
+  }
   // ---- ІНІЦІАЛІЗАЦІЯ (прикріплюємо обробники) ----
-  const cards = [1, 2, 3];
+  const cards = [1, 2, 3, 4, 5];
 
   cards.forEach((id) => {
     // перевіряємо мінімальну наявність елементів
@@ -155,12 +159,12 @@ document.addEventListener("DOMContentLoaded", () => {
       checkNowBtn.addEventListener("click", () => {
         addLog(
           id,
-          "🔄 Користувацький запит: опитати зараз (виклич WS або чекати сервер)"
+          "🔄 Користувацький запит: опитати зараз (виклич WS або чекати сервер)",
         );
         // якщо хочеш, можна викликати ws.send({type:"checkNow", id}) — але тут нема ws в цьому файлі
         // dispatch event so server-listener may listen and forward to ws if implemented
         document.dispatchEvent(
-          new CustomEvent("manualCheck", { detail: { id } })
+          new CustomEvent("manualCheck", { detail: { id } }),
         );
       });
     }
@@ -169,10 +173,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---- ОБРОБКА ОНОВЛЕНЬ МЕТРИК
   // Слухаємо custom event, який надсилає server-listener.js
   document.addEventListener("metricUpdate", (ev) => {
-    const { id, value, ts } = ev.detail;
+    const { id, value, ts, threshold: serverThreshold } = ev.detail;
     const valEl = document.getElementById(`val${id}`);
     const statusEl = document.getElementById(`status${id}`);
-    const threshold = getThreshold(id);
+    const previousBadState = {};
+    const threshold =
+      serverThreshold !== undefined && serverThreshold !== null
+        ? Number(serverThreshold)
+        : getThreshold(id);
+
+    thresholds[id] = threshold;
 
     if (valEl) valEl.textContent = isNaN(value) ? "—" : value;
     if (statusEl)
@@ -203,27 +213,146 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (bad) {
       addLimitedLog(`⚠️ Увага! Значення поза порогом (${threshold})`);
-      beep(id);
+
+      // Звук тільки при переході
+      // NORMAL → BAD
+
+      if (previousBadState[id] !== true) {
+        beep(id);
+      }
+
+      previousBadState[id] = true;
 
       const card = document.getElementById(`card${id}`);
+
       if (card) {
-        let blinkCount = 0;
-        const blinkInterval = setInterval(() => {
-          card.classList.toggle("alert");
-          blinkCount++;
-          if (blinkCount >= 6) {
-            clearInterval(blinkInterval);
-            card.classList.remove("alert");
-          }
-        }, 500);
+        card.classList.add("alert");
       }
     } else {
-      addLimitedLog(`✅ Значення ${value} в нормі`);
+      // Якщо було аварійне значення,
+      // а тепер повернулось у норму
+
+      if (previousBadState[id] === true) {
+        addLimitedLog(`✅ Значення ${value} повернулося в норму`);
+      }
+
+      previousBadState[id] = false;
+
+      const card = document.getElementById(`card${id}`);
+
+      if (card) {
+        card.classList.remove("alert");
+      }
     }
+  });
+
+  // ======================================================
+  // WARNING — регістр тимчасово відсутній
+  // ======================================================
+
+  document.addEventListener("serverWarning", (ev) => {
+    const { id, message } = ev.detail;
+
+    const card = document.getElementById(`card${id}`);
+
+    if (card) {
+      card.classList.remove(
+        "alert",
+        "status-unavailable",
+        "status-reconnecting",
+      );
+
+      card.classList.add("status-warning");
+    }
+
+    const status = document.getElementById(`status${id}`);
+
+    if (status) {
+      status.textContent = `🟡 ${message || "Регістр тимчасово недоступний"}`;
+    }
+
+    addLog(id, `🟡 ${message || "Регістр тимчасово недоступний"}`);
   });
 
   // ---- OPTIONAL: якщо server-listener не шле manualCheck, можна підписатись тут і перекинути в WS
   // document.addEventListener("manualCheck", (ev) => { ... })
+
+  // ======================================================
+  // RECONNECTING
+  // ======================================================
+
+  document.addEventListener("serverReconnecting", (ev) => {
+    const { id, message } = ev.detail;
+
+    const card = document.getElementById(`card${id}`);
+
+    if (card) {
+      card.classList.remove("alert", "status-warning", "status-unavailable");
+
+      card.classList.add("status-reconnecting");
+    }
+
+    const status = document.getElementById(`status${id}`);
+
+    if (status) {
+      status.textContent = `🔄 ${message || "Відновлення з'єднання..."}`;
+    }
+
+    addLog(id, `🔄 ${message || "Відновлення з'єднання..."}`);
+  });
+
+  // ======================================================
+  // RELOGIN SUCCESS
+  // ======================================================
+
+  document.addEventListener("serverReconnected", (ev) => {
+    const { id, message } = ev.detail;
+
+    const card = document.getElementById(`card${id}`);
+
+    if (card) {
+      card.classList.remove(
+        "status-warning",
+        "status-reconnecting",
+        "status-unavailable",
+      );
+    }
+
+    const status = document.getElementById(`status${id}`);
+
+    if (status) {
+      status.textContent = `🟢 ${message || "Авторизацію відновлено"}`;
+    }
+
+    addLog(id, `🟢 ${message || "Авторизацію відновлено"}`);
+  });
+
+  // ======================================================
+  // UNAVAILABLE
+  // ======================================================
+
+  document.addEventListener("serverUnavailable", (ev) => {
+    const { id, message } = ev.detail;
+
+    const card = document.getElementById(`card${id}`);
+
+    if (card) {
+      card.classList.remove("status-warning", "status-reconnecting");
+
+      card.classList.add("status-unavailable");
+    }
+
+    const status = document.getElementById(`status${id}`);
+
+    if (status) {
+      status.textContent = `🔴 ${message || "Установка недоступна"}`;
+    }
+
+    addLog(id, `🔴 ${message || "Установка недоступна"}`);
+
+    // Звук аварії
+    beep(id, 1000, 400);
+  });
 
   console.log("Frontend logic initialized: thresholds:", thresholds);
 });

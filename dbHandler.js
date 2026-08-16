@@ -29,11 +29,11 @@ async function checkDatabaseTimezone() {
     console.log(
       `   - Час Node.js (EET): ${new Date().toLocaleString("uk-UA", {
         timeZone: "Europe/Kiev",
-      })}`
+      })}`,
     );
     console.log(`   - ЧАС БД (PostgreSQL): ${row.db_timestamp}`);
     console.log(
-      `   - БД дата (CURRENT_DATE): ${row.db_date.toISOString().split("T")[0]}`
+      `   - БД дата (CURRENT_DATE): ${row.db_date.toISOString().split("T")[0]}`,
     );
     console.log(`   - БД година (0-23): ${Math.floor(row.db_hour_24)}`);
     console.log(`   - БД година (1-24): ${Math.floor(row.db_hour_1_24)}`);
@@ -54,10 +54,10 @@ async function checkDatabaseTimezone() {
  */
 export async function getCurrentDateTimeFromDB() {
   try {
-    // Використовуємо час Node.js в часовому поясі EET (Europe/Kiev)
+    // Поточний час у часовій зоні України
     const now = new Date();
 
-    // Отримуємо дату та час в EET
+    // Отримуємо дату в EET / Europe-Kyiv
     const eetDateString = now.toLocaleDateString("en-CA", {
       timeZone: "Europe/Kiev",
       year: "numeric",
@@ -65,31 +65,57 @@ export async function getCurrentDateTimeFromDB() {
       day: "2-digit",
     });
 
+    // ВАЖЛИВО:
+    // hourCycle: "h23" гарантує години 00-23.
+    // Без цього Intl інколи може повернути 24:xx опівночі.
     const eetTimeString = now.toLocaleTimeString("en-US", {
       timeZone: "Europe/Kiev",
       hour12: false,
+      hourCycle: "h23",
       hour: "2-digit",
       minute: "2-digit",
     });
 
-    const date = eetDateString.replace(/\//g, "-"); // YYYY-MM-DD
-    const hourEET = parseInt(eetTimeString.split(":")[0], 10); // 0-23
-    const hour = hourEET + 1; // Конвертуємо до формату 1-24
+    const date = eetDateString.replace(/\//g, "-");
 
-    return { date, hour };
+    const hourEET = parseInt(eetTimeString.split(":")[0], 10);
+
+    // База використовує години 1-24:
+    //
+    // 00:00-00:59 → 1
+    // 01:00-01:59 → 2
+    // ...
+    // 22:00-22:59 → 23
+    // 23:00-23:59 → 24
+    const hour = hourEET + 1;
+
+    return {
+      date,
+      hour,
+    };
   } catch (error) {
     console.error("❌ Помилка під час отримання часу EET:", error.message);
-    // Fallback до локального часу Node.js у разі помилки
+
+    // Fallback
     const now = new Date();
+
     const date = now
       .toLocaleDateString("en-CA", {
+        timeZone: "Europe/Kiev",
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
       })
       .replace(/\//g, "-");
-    const hour = now.getHours() + 1;
-    return { date, hour };
+
+    const hourEET = now.getHours();
+
+    // const hour = hourEET + 1;
+
+    return {
+      date,
+      hour,
+    };
   }
 }
 
@@ -124,7 +150,7 @@ async function initializeDatabase() {
     await pool.query(createInstallationTableQuery);
     await pool.query(createCapacityTableQuery); // ✅ Створюємо нову таблицю
     console.log(
-      "✅ Таблиці installation_data та daily_capacity перевірено/створено."
+      "✅ Таблиці installation_data та daily_capacity перевірено/створено.",
     );
     await checkDatabaseTimezone();
   } catch (error) {
@@ -281,7 +307,7 @@ export async function getCapacityValueForHour(installation, date) {
   } catch (error) {
     console.error(
       "❌ Помилка під час отримання значення ємності:",
-      error.message
+      error.message,
     );
     // У разі помилки також повертаємо 1 як безпечний дефолт
     return 1;
@@ -301,7 +327,7 @@ export async function updateHourlyThreshold(
   installation,
   date,
   hour,
-  newThreshold
+  newThreshold,
 ) {
   // Використовуємо INSERT ... ON CONFLICT DO UPDATE для ефективної вставки/оновлення
   const query = `
@@ -316,12 +342,12 @@ export async function updateHourlyThreshold(
   try {
     await pool.query(query, params);
     console.log(
-      `✅ Успішно оновлено поріг для ${installation} ${date}, година ${hour} до ${newThreshold} кВт.`
+      `✅ Успішно оновлено поріг для ${installation} ${date}, година ${hour} до ${newThreshold} кВт.`,
     );
   } catch (error) {
     console.error(
       `❌ Помилка під час оновлення погодинного порогу (${installation} ${date}, год ${hour}):`,
-      error.message
+      error.message,
     );
     throw error;
   }
