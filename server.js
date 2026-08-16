@@ -148,17 +148,28 @@ async function startServer(port) {
   return new Promise((resolve, reject) => {
     const httpServer = app.listen(port, () => {
       console.log(`✅ Веб інтерфейс: http://localhost:${port}`);
-      wss = new WebSocketServer({ server: httpServer });
-      resolve(httpServer);
+
+      const wsServer = new WebSocketServer({
+        server: httpServer,
+      });
+
+      console.log("✅ WebSocket сервер запущено");
+
+      resolve({
+        httpServer,
+        wsServer,
+      });
     });
 
     httpServer.on("error", (err) => {
       if (err.code === "EADDRINUSE") {
         if (!process.env.PORT) {
           const fallbackPort = port + 1;
+
           console.log(
             `⚠️ Порт ${port} зайнятий. Спробую запуститися на ${fallbackPort}...`,
           );
+
           resolve(startServer(fallbackPort));
           return;
         }
@@ -166,6 +177,7 @@ async function startServer(port) {
         console.error(
           `❌ Порт ${port} вже зайнятий. Змініть PORT або завершіть інший процес.`,
         );
+
         reject(err);
         return;
       }
@@ -174,6 +186,12 @@ async function startServer(port) {
     });
   });
 }
+
+// === 🚀 ЗАПУСК HTTP + WEBSOCKET СЕРВЕРА ===
+const serverData = await startServer(PORT);
+
+server = serverData.httpServer;
+wss = serverData.wsServer;
 
 // === 🧠 MONITORING RAM: NODE + CHROMIUM ===
 setInterval(() => {
