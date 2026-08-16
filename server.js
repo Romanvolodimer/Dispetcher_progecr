@@ -1,6 +1,7 @@
 import express from "express";
 import { WebSocketServer } from "ws";
 import puppeteer from "puppeteer";
+import { exec } from "child_process";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -174,19 +175,56 @@ async function startServer(port) {
   });
 }
 
-server = await startServer(PORT);
-
-// === 🧠 MONITORING RAM ===
+// === 🧠 MONITORING RAM: NODE + CHROMIUM ===
 setInterval(() => {
+  // RAM Node.js
   const memory = process.memoryUsage();
 
-  const rss = Math.round(memory.rss / 1024 / 1024);
+  const nodeRss = Math.round(memory.rss / 1024 / 1024);
   const heapUsed = Math.round(memory.heapUsed / 1024 / 1024);
   const heapTotal = Math.round(memory.heapTotal / 1024 / 1024);
   const external = Math.round(memory.external / 1024 / 1024);
 
   console.log(
-    `🧠 RAM | RSS: ${rss} MB | Heap: ${heapUsed}/${heapTotal} MB | External: ${external} MB`,
+    `🧠 NODE | RSS: ${nodeRss} MB | Heap: ${heapUsed}/${heapTotal} MB | External: ${external} MB`,
+  );
+
+  // RAM Chromium
+  exec(
+    `ps -eo pid,rss,comm,args | grep -E '[c]hrome|[c]hromium'`,
+    (error, stdout) => {
+      if (error || !stdout.trim()) {
+        console.log("🌐 CHROME | процеси не знайдено");
+        return;
+      }
+
+      let totalChromeRss = 0;
+      let processCount = 0;
+
+      stdout
+        .trim()
+        .split("\n")
+        .forEach((line) => {
+          const parts = line.trim().split(/\s+/);
+
+          if (parts.length >= 2) {
+            const rssKb = Number(parts[1]);
+
+            if (!Number.isNaN(rssKb)) {
+              totalChromeRss += rssKb;
+              processCount++;
+            }
+          }
+        });
+
+      const chromeMb = Math.round(totalChromeRss / 1024);
+
+      console.log(
+        `🌐 CHROME | Processes: ${processCount} | RSS: ${chromeMb} MB`,
+      );
+
+      console.log(`📊 TOTAL APPROX | Node + Chrome: ${nodeRss + chromeMb} MB`);
+    },
   );
 }, 60_000);
 
