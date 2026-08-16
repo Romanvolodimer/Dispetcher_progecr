@@ -332,6 +332,8 @@ async function safeNavigate(page, url, label, timeoutMs = 60000) {
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-software-rasterizer",
         "--ignore-certificate-errors",
         "--allow-running-insecure-content",
       ],
