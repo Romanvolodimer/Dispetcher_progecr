@@ -421,7 +421,7 @@
 
                 div.innerHTML = `
                     <span class="input-hour-label">${hourLabel}:</span> 
-                    <input type="number" id="input-${i}" name="hour${i}" min="0" required value="${initialValue}">
+                    <input type="number" id="input-${i}" name="hour${i}" min="-6000" required value="${initialValue}">
                 `;
                 container.appendChild(div);
             }
