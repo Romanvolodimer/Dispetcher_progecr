@@ -48,7 +48,7 @@ function generateCalendar() {
     const date = new Date(currentYear, currentMonth, day);
     const dateString = `${currentYear}-${String(currentMonth + 1).padStart(
       2,
-      "0"
+      "0",
     )}-${String(day).padStart(2, "0")}`;
 
     const dayElement = document.createElement("div");
@@ -70,9 +70,8 @@ async function openDataEntryWindow(date) {
 
   currentSelectedDate = date;
   const modal = document.getElementById("data-entry-modal");
-  document.getElementById(
-    "modal-date-header"
-  ).textContent = `Введення даних (${selectedInstallation}) за: ${date}`;
+  document.getElementById("modal-date-header").textContent =
+    `Введення даних (${selectedInstallation}) за: ${date}`;
 
   // Генерація 24 полів вводу
   const container = document.getElementById("input-fields-container");
@@ -83,8 +82,8 @@ async function openDataEntryWindow(date) {
     // 💡 Додано порожній атрибут value, щоб уникнути помилок при заповненні
     div.innerHTML = `<span class="input-hour-label">${String(i).padStart(
       2,
-      "0"
-    )}:</span> <input type="number" id="input-${i}" name="hour${i}" min="0" required value="">`;
+      "0",
+    )}:</span> <input type="number" id="input-${i}" name="hour${i}" min="-6000" required value="">`;
     container.appendChild(div);
   }
 
@@ -94,7 +93,7 @@ async function openDataEntryWindow(date) {
   try {
     addLog(0, `Завантаження даних для ${selectedInstallation} за ${date}...`);
     const response = await fetch(
-      `/api/get-data?installation=${selectedInstallation}&date=${date}`
+      `/api/get-data?installation=${selectedInstallation}&date=${date}`,
     );
     const result = await response.json();
 
@@ -121,7 +120,7 @@ async function openDataEntryWindow(date) {
     } else {
       addLog(
         0,
-        `Помилка завантаження даних: ${result.message || "Невідома помилка"}`
+        `Помилка завантаження даних: ${result.message || "Невідома помилка"}`,
       );
     }
   } catch (error) {
@@ -182,17 +181,17 @@ async function saveData() {
 
     if (response.ok && result.success) {
       alert(
-        `✅ Дані для ${data.installation} за ${data.date} успішно збережено!`
+        `✅ Дані для ${data.installation} за ${data.date} успішно збережено!`,
       );
       addLog(0, `Дані успішно збережено.`);
       closeDataEntryWindow();
     } else {
       alert(
-        `❌ Помилка збереження даних: ${result.message || "Невідома помилка"}`
+        `❌ Помилка збереження даних: ${result.message || "Невідома помилка"}`,
       );
       addLog(
         0,
-        `❌ Помилка збереження: ${result.message || "Невідома помилка"}`
+        `❌ Помилка збереження: ${result.message || "Невідома помилка"}`,
       );
     }
   } catch (error) {
