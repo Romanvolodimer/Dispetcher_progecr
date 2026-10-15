@@ -178,7 +178,7 @@ const CARD_TO_INSTALLATION_MAP = {
 // REGISTERS
 // ======================================================
 
-const SYSTEM_1_REGISTER = "18";
+const SYSTEM_1_REGISTER = "174";
 
 const SYSTEM_2_REGISTERS = {
   2: "1217",
